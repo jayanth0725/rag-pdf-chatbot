@@ -32,30 +32,35 @@ if uploaded_file and hf_api_key:
         embeddings = HuggingFaceEmbeddings(model_name="all-MiniLM-L6-v2")
         vector_db = Chroma.from_documents(chunks, embeddings)
 
-        llm = HuggingFaceEndpoint(repo_id="HuggingFaceH4/zephyr-7b-beta", huggingfacehub_api_token=hf_api_key, temperature=0.1)
+        llm = HuggingFaceEndpoint(
+            repo_id="Qwen/Qwen2.5-7B-Instruct",
+            huggingfacehub_api_token=hf_api_key,
+            temperature=0.1,
+            task="text-generation"
+        )
 
         retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
-        condense_template = """<|system|>
+        condense_template = """<|im_start|>system
 Given the following chat history and a follow-up question, rephrase the follow-up question to be a standalone question.
 Chat History:
-{chat_history}</s>
-<|user|>
-Follow-up question: {input}</s>
-<|assistant|>
+{chat_history}<|im_end|>
+<|im_start|>user
+Follow-up question: {input}<|im_end|>
+<|im_start|>assistant
 Standalone question:"""
         condense_prompt = PromptTemplate.from_template(condense_template)
         history_aware_retriever = create_history_aware_retriever(llm, retriever, condense_prompt)
 
-        qa_template = """<|system|>
+        qa_template = """<|im_start|>system
 You are a helpful AI assistant. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.
-Context: {context}</s>
-<|user|>
+Context: {context}<|im_end|>
+<|im_start|>user
 Chat History:
 {chat_history}
 
-Question: {input}</s>
-<|assistant|>
+Question: {input}<|im_end|>
+<|im_start|>assistant
 """
         qa_prompt = PromptTemplate.from_template(qa_template)
         combine_docs_chain = create_stuff_documents_chain(llm, qa_prompt)
@@ -84,8 +89,10 @@ Question: {input}</s>
 
                 answer = response["answer"]
 
-                if "<|assistant|>" in answer:
-                    answer = answer.split("<|assistant|>")[-1].strip()
+                if "<|im_start|>assistant" in answer:
+                    answer = answer.split("<|im_start|>assistant")[-1].strip()
+                elif "assistant\n" in answer:
+                    answer = answer.split("assistant\n")[-1].strip()
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
