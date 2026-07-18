@@ -1,54 +1,64 @@
-# RAG PDF Chatbot: Chat with your Documents
+# PDF Chatbot: Conversational RAG Pipeline
 
-An end-to-end Retrieval-Augmented Generation (RAG) pipeline that allows users to ask natural language questions about a specific PDF document and receive accurate, context-aware answers. 
+Chat with your PDFs using an open-source 7B Large Language Model. Built with LangChain, ChromaDB, and Hugging Face.
 
-This project runs entirely on a free Kaggle GPU using open-source models, requiring no paid API keys.
+This project is an end-to-end Retrieval-Augmented Generation (RAG) pipeline that allows users to ask natural language questions about a specific PDF document and receive accurate, context-aware answers with full conversational memory.
+
+**[Try the Live Web App Here](https://rag-pdf-chatbot-jayanth0725.streamlit.app/)**
+
+---
 
 ## The Tech Stack
 
-* **Language Model:** Zephyr-7B-beta (Quantized to 4-bit)
+* **User Interface:** Streamlit
+* **Language Model:** Zephyr-7B-beta (via Hugging Face API for the web app, and 4-bit local quantization for the notebook)
 * **Embeddings:** Hugging Face `all-MiniLM-L6-v2`
 * **Vector Database:** ChromaDB
-* **Orchestration:** LangChain
-* **Hardware:** Kaggle Notebook (P100/T4 GPU x2)
+* **Orchestration:** LangChain Classic (LCEL Architecture)
 
-## How It Works
+---
 
-1. **Document Ingestion:** Uses LangChain's `PyPDFLoader` to extract text from `Retrieval-augmented_generation.pdf]` (downloaded from Wikipedia).
-2. **Chunking:** Splits the text into overlapping 500-character chunks to bypass LLM memory limits while preserving context.
-3. **Vectorization:** Converts text chunks into mathematical embeddings and stores them in a local Chroma vector database.
-4. **Retrieval & Generation:** When a user asks a question, the system retrieves the top 3 most relevant text chunks and passes them to the Zephyr-7B model to synthesize a final answer.
+## Key Features
 
-## Results & Example
+* **Conversational Memory:** Utilizes a History-Aware Retriever to understand follow-up questions by rephrasing them into standalone queries based on the chat history.
+* **Semantic Document Ingestion:** Uses LangChain's `PyPDFLoader` and `RecursiveCharacterTextSplitter` to extract and split text into overlapping 500-character chunks, preserving context.
+* **Serverless Inference:** The web interface connects to the Hugging Face Inference API (`HuggingFaceEndpoint`), allowing it to run smoothly on standard hardware without local GPU requirements.
 
-**Document Used:** [A Wikipedia page about "Retrieval-augmented_generation" in PDF format]
+---
 
-**Question:** 
-> "[Summarize the core concepts and operational process of Retrieval-Augmented Generation based on the text.]"
+## How to Run Locally
 
-**Generated Answer:** 
-"Retrieval-Augmented Generation (RAG) is a technique that enhances large language models (LLMs) by allowing them to access and utilize external data beyond their pre-existing training data. The process involves the following core concepts and operational steps:
+If you want to run this interface locally on your own machine:
 
-1. External documents: LLMs refer to a specified set of external documents to supplement information from their training data.
+1. Clone the repository and navigate to the project directory:
+   ```bash
+   cd path/to/your/pdf-chatbot-folder
+   ```
+2. Install the required dependencies:
+    ```bash
+    pip install -r requirements.txt
+    ```
+3. Launch the Streamlit local web server:
+    ```bash
+    streamlit run app.py
+    ```
 
-2. User query: LLMs respond to user queries based on the combined information from the external documents and their training data.
+Start Chatting: Use the sidebar to enter your free Hugging Face API Key and upload your target document.
 
-3. Information retrieval: LLMs retrieve relevant information from the external documents based on the user query.
+## Development (Kaggle GPU Notebook)
 
-4. Prompt: LLMs are prompted with a combination of the user query and the retrieved information to generate tailored output.
+While the Streamlit app relies on cloud APIs for inference, this repository also includes the complete GPU Blueprint as a Jupyter Notebook (pdf-chatbot.ipynb).  This notebook proves the underlying machine learning engineering and serves as a 100% self-hosted, offline testing lab:
 
-5. Output: LLMs generate output based on both the user query and the retrieved information.
+1. Hardware: Configured to run on Kaggle Notebooks using P100 or T4x2 GPUs. 
 
-6. Improvements: Some models incorporate additional steps to improve output, such as re-ranking of retrieved information, context selection, and fine-tuning.
+2. Quantization: Demonstrates how to load the massive 7B parameter model directly into VRAM using BitsAndBytesConfig (4-bit quantization). 
 
-RAG is used in applications where generated responses need to be grounded in external or frequently updated information, such as healthcare."
+3. Local Inference: Utilizes PyTorch and Hugging Face pipeline for direct, hardware-level model execution without relying on external API endpoints.
 
-## How to Run It Yourself
+To experiment with the raw pipeline:
 
-Because this relies on a 7-billion parameter language model, it requires a GPU to run efficiently. The easiest way to test this code is via Kaggle:
+1. Open the Kaggle Notebook.
 
-1. Click [here](https://www.kaggle.com/code/jayanthraveendra/pdf-chatbot) to open the Kaggle Notebook.
-2. Click **Copy & Edit** in the top right corner.
-3. Ensure the Accelerator is set to **GPU P100** or **GPU T4x2** in the session options.
-4. Upload the PDF in /data to the Kaggle environment or upload your own PDF to the environment and change the file path in Cell 4. You can change the question as well in Cell 6.
-5. Run all cells!
+2. Click Copy & Edit and ensure the Accelerator is set to a GPU tier.
+
+3. Run all cells to process the PDF and execute retrieval chains natively. 
