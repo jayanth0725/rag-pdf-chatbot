@@ -11,7 +11,7 @@ This project is an end-to-end Retrieval-Augmented Generation (RAG) pipeline that
 ## The Tech Stack
 
 * **User Interface:** Streamlit
-* **Language Model:** Zephyr-7B-beta (via Hugging Face API for the web app, and 4-bit local quantization for the notebook)
+* **Language Model:** Qwen/Qwen2.5-7B-Instruct (via Hugging Face API for the web app) and Zephyr-7B-beta (using 4-bit local quantization for the Kaggle notebook)
 * **Embeddings:** Hugging Face `all-MiniLM-L6-v2`
 * **Vector Database:** ChromaDB
 * **Orchestration:** LangChain Classic (LCEL Architecture)
