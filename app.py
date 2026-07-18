@@ -2,11 +2,12 @@ import streamlit as st
 import tempfile
 from langchain_community.document_loaders import PyPDFLoader
 from langchain_text_splitters import RecursiveCharacterTextSplitter
-from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint
+from langchain_huggingface import HuggingFaceEmbeddings, HuggingFaceEndpoint, ChatHuggingFace
 from langchain_community.vectorstores import Chroma
 from langchain_classic.chains import create_retrieval_chain, create_history_aware_retriever
 from langchain_classic.chains.combine_documents import create_stuff_documents_chain
-from langchain_core.prompts import PromptTemplate
+from langchain_core.prompts import ChatPromptTemplate, MessagesPlaceholder
+from langchain_core.messages import HumanMessage, AIMessage
 
 st.set_page_config(page_title="PDF Chatbot", page_icon="📄")
 st.title("Chat with your PDF")
@@ -36,34 +37,27 @@ if uploaded_file and hf_api_key:
             repo_id="Qwen/Qwen2.5-7B-Instruct",
             huggingfacehub_api_token=hf_api_key,
             temperature=0.1,
-            task="text-generation"
         )
+        
+        chat_model = ChatHuggingFace(llm=llm)
 
         retriever = vector_db.as_retriever(search_kwargs={"k": 3})
 
-        condense_template = """<|im_start|>system
-Given the following chat history and a follow-up question, rephrase the follow-up question to be a standalone question.
-Chat History:
-{chat_history}<|im_end|>
-<|im_start|>user
-Follow-up question: {input}<|im_end|>
-<|im_start|>assistant
-Standalone question:"""
-        condense_prompt = PromptTemplate.from_template(condense_template)
-        history_aware_retriever = create_history_aware_retriever(llm, retriever, condense_prompt)
+        condense_prompt = ChatPromptTemplate.from_messages([
+            ("system", "Given the following chat history and a follow-up question, rephrase the follow-up question to be a standalone question."),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "Follow-up question: {input}")
+        ])
+        
+        history_aware_retriever = create_history_aware_retriever(chat_model, retriever, condense_prompt)
 
-        qa_template = """<|im_start|>system
-You are a helpful AI assistant. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.
-Context: {context}<|im_end|>
-<|im_start|>user
-Chat History:
-{chat_history}
-
-Question: {input}<|im_end|>
-<|im_start|>assistant
-"""
-        qa_prompt = PromptTemplate.from_template(qa_template)
-        combine_docs_chain = create_stuff_documents_chain(llm, qa_prompt)
+        qa_prompt = ChatPromptTemplate.from_messages([
+            ("system", "You are a helpful AI assistant. Use the following pieces of retrieved context to answer the question. If you don't know the answer, just say that you don't know.\n\nContext: {context}"),
+            MessagesPlaceholder(variable_name="chat_history"),
+            ("human", "Question: {input}")
+        ])
+        
+        combine_docs_chain = create_stuff_documents_chain(chat_model, qa_prompt)
 
         return create_retrieval_chain(history_aware_retriever, combine_docs_chain)
 
@@ -80,19 +74,21 @@ Question: {input}<|im_end|>
 
         with st.chat_message("assistant"):
             with st.spinner("Searching document..."):
-                formatted_history = ""
+                
+                chat_history = []
                 for msg in st.session_state.messages[:-1]:
-                    role = "User" if msg["role"] == "user" else "Assistant"
-                    formatted_history += f"{role}: {msg['content']}\n"
+                    if msg["role"] == "user":
+                        chat_history.append(HumanMessage(content=msg["content"]))
+                    else:
+                        chat_history.append(AIMessage(content=msg["content"]))
 
-                response = qa_chain.invoke({"input": prompt, "chat_history": formatted_history})
+                # Invoke the chain
+                response = qa_chain.invoke({
+                    "input": prompt, 
+                    "chat_history": chat_history
+                })
 
                 answer = response["answer"]
-
-                if "<|im_start|>assistant" in answer:
-                    answer = answer.split("<|im_start|>assistant")[-1].strip()
-                elif "assistant\n" in answer:
-                    answer = answer.split("assistant\n")[-1].strip()
 
                 st.markdown(answer)
                 st.session_state.messages.append({"role": "assistant", "content": answer})
