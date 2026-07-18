@@ -45,6 +45,18 @@ If you want to run this interface locally on your own machine:
 
 Start Chatting: Use the sidebar to enter your free Hugging Face API Key and upload your target document.
 
+---
+
+### Getting a Free API Token
+
+To interact with the Zephyr-7B model, you will need a free access token from Hugging Face:
+1. Go to your [Hugging Face Token Settings](https://huggingface.co/settings/tokens).
+2. Click **Create new token**.
+3. Select **Fine-grained** as the token type, give it a name, and click the **Inference** preset button (this grants your app permission to make text-generation calls).
+4. Click **Create token**, copy it, and paste it directly into the sidebar of the application!
+
+---
+
 ## Development (Kaggle GPU Notebook)
 
 While the Streamlit app relies on cloud APIs for inference, this repository also includes the complete GPU Blueprint as a Jupyter Notebook (pdf-chatbot.ipynb).  This notebook proves the underlying machine learning engineering and serves as a 100% self-hosted, offline testing lab:
